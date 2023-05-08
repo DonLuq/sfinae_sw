@@ -4,37 +4,62 @@
 
 void replace_template_parameter(std::string &line, size_t &enable_if_start, std::ofstream &output)
 {
-    size_t template_start = line.find("template");
-    std::cout << "DEBUG I\n";
-    size_t v_start = line.find_first_of("<", enable_if_start) + 1; // 1 -> "<"
-    size_t v_stop = line.find_first_of(">", v_start);
-    output << line.substr(0, enable_if_start - 11) + ">"; // 11 -> length of ", typename "  <--- make it more common
-    output << "\nrequires " << line.substr(v_start, v_stop - v_start + 1)
-           << "\n";
-};
+    const std::string template_keyword = "template";
+    size_t template_start = line.find(template_keyword);
 
-void replace_return_parameter(std::string &line, std::string &next_line, size_t &enable_if_start, std::ofstream &output)
+    if (template_start == std::string::npos)
+    {
+        return; // early exit if "template" not found
+    }
+
+    std::cout << "DEBUG I\n";
+
+    const std::string open_bracket = "<";
+    const std::string close_bracket = ">";
+
+    size_t v_start = line.find_first_of(open_bracket, enable_if_start) + 1;
+    size_t v_stop = line.find_first_of(close_bracket, v_start);
+
+    const std::string typename_keyword = "typename";
+    const size_t typename_length = typename_keyword.length();
+    output << line.substr(0, enable_if_start - typename_length - 3) << close_bracket << "\n"; // 3 -> length of ",  "
+
+    output << "requires " << line.substr(v_start, v_stop - v_start + 1) << "\n";
+}
+
+void replace_return_parameter(const std::string &line, const std::string &next_line, const size_t enable_if_start, std::ofstream &output)
 {
     std::cout << "DEBUG II\n";
-    // std::string old_line = line;
-    size_t v_start = line.find_first_of("<", enable_if_start) + 1; // 1 -> "<"
-    size_t v_stop = line.find_first_of(">", v_start);
 
-    size_t typename_name_s = line.find("<", v_start) + 1;
-    size_t typename_name_e = line.find(">", v_start);
+    const std::string open_bracket = "<";
+    const std::string close_bracket = ">";
 
-    output << line.substr(typename_name_s, typename_name_e - typename_name_s) + " " + next_line + " requires(" + line.substr(v_start, v_stop - v_start + 1) + ")" << std::endl;
-};
+    const size_t v_start = line.find_first_of(open_bracket, enable_if_start) + 1;
+    const size_t v_stop = line.find_first_of(close_bracket, v_start);
 
-void replace_class_parameter(std::string &line, size_t &enable_if_start, std::ofstream &output)
+    const size_t typename_name_start = line.find(open_bracket, v_start) + 1;
+    const size_t typename_name_end = line.find(close_bracket, v_start);
+
+    const std::string typename_name = line.substr(typename_name_start, typename_name_end - typename_name_start);
+
+    output << typename_name << " " << next_line << " requires(" << line.substr(v_start, v_stop - v_start + 1) << ")" << std::endl;
+}
+
+void replace_class_parameter(std::string &line, const size_t enable_if_start, std::ofstream &output)
 {
     std::cout << "DEBUG III\n";
-    size_t v_start = line.find_first_of("<", enable_if_start) + 1; // 1 -> "<"
-    size_t v_stop = line.find_first_of(">", v_start);
 
-    output << "requires " + line.substr(v_start, v_stop - v_start + 1) << std::endl;
-    output << line.substr(0, enable_if_start - 11) + ">" << std::endl; // temp solution to rewrite to not use constants
-};
+    const std::string open_bracket = "<";
+    const std::string close_bracket = ">";
+
+    const size_t v_start = line.find_first_of(open_bracket, enable_if_start) + 1;
+    const size_t v_stop = line.find_first_of(close_bracket, v_start);
+
+    const std::string requires_clause = "requires " + line.substr(v_start, v_stop - v_start + 1) + "\n";
+    const std::string template_declaration = line.substr(0, enable_if_start - 11) + ">\n"; // 11 -> length of ", typename "  <--- make it more common
+
+    output << requires_clause << template_declaration;
+}
 
 int main(int argc, char *argv[])
 {
@@ -63,11 +88,11 @@ int main(int argc, char *argv[])
     {
         size_t enable_if_start = line.find("std::enable_if");
         size_t if_return_par = line.substr(0, enable_if_start + 1).find("typename");
-        size_t if_class = line.find("class"); // dodac helper remove whitespaces
+        size_t if_class = line.find("class");
+
         if (enable_if_start != std::string::npos)
         {
-            size_t template_start = line.find("template");
-            if (template_start != std::string::npos)
+            if (const size_t template_start = line.find("template"); template_start != std::string::npos)
             {
                 replace_template_parameter(line, enable_if_start, output);
             }
@@ -77,7 +102,7 @@ int main(int argc, char *argv[])
                 std::getline(input, next_line);
                 replace_return_parameter(line, next_line, enable_if_start, output);
             }
-            else if (if_class == 0) // CLASS PARAMETER
+            else if (if_class == 0)
             {
                 replace_class_parameter(line, enable_if_start, output);
             }
@@ -92,7 +117,6 @@ int main(int argc, char *argv[])
         }
         else
         {
-            // implamented two other options where eneable_if could be used
             output << line << "\n";
         }
     }
