@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <regex>
 
 void replace_template_parameter(std::string &line, size_t &enable_if_start, std::ofstream &output)
 {
@@ -14,17 +15,24 @@ void replace_template_parameter(std::string &line, size_t &enable_if_start, std:
 
     std::cout << "DEBUG I\n";
 
-    const std::string open_bracket = "<";
-    const std::string close_bracket = ">";
+    std::string line_copy = line;
+    std::regex pattern_typename("typename\\s+([a-zA-Z0-9_]+),");
+    std::smatch matches_typename;
 
-    size_t v_start = line.find_first_of(open_bracket, enable_if_start) + 1;
-    size_t v_stop = line.find_first_of(close_bracket, v_start);
+    if (std::regex_search(line_copy, matches_typename, pattern_typename))
+    {
+        std::string result = "template <typename " + matches_typename[1].str() + ">";
+        output << result << std::endl; // Output: template <typename T>
+    }
 
-    const std::string typename_keyword = "typename";
-    const size_t typename_length = typename_keyword.length();
-    output << line.substr(0, enable_if_start - typename_length - 3) << close_bracket << "\n"; // 3 -> length of ",  "
+    std::regex pattern_enable_if(R"(std::enable_if(?:_t)?<(.+?>))");
+    std::smatch matches;
 
-    output << "requires " << line.substr(v_start, v_stop - v_start + 1) << "\n";
+    while (std::regex_search(line, matches, pattern_enable_if))
+    {
+        output << "requires " << matches[1] << std::endl;
+        line = matches.suffix();
+    }
 }
 
 void replace_return_parameter(const std::string &line, const std::string &next_line, const size_t enable_if_start, std::ofstream &output)
@@ -112,7 +120,7 @@ int main(int argc, char *argv[])
             }
             else
             {
-                std::cout << "This example of enable_if substitution is not supported yet";
+                std::cout << "This example of enable_if substitution is not supported yet\n";
             }
         }
         else
