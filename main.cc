@@ -42,15 +42,44 @@ void replace_return_parameter(const std::string &line, const std::string &next_l
     const std::string open_bracket = "<";
     const std::string close_bracket = ">";
 
-    const size_t v_start = line.find_first_of(open_bracket, enable_if_start) + 1;
-    const size_t v_stop = line.find_first_of(close_bracket, v_start);
+    std::string result_condition;
+    std::string result_type;
+    std::string result_func_name;
 
-    const size_t typename_name_start = line.find(open_bracket, v_start) + 1;
-    const size_t typename_name_end = line.find(close_bracket, v_start);
+    std::regex pattern_enable_if(R"(std::enable_if(?:_t)?<(.+?>))");
+    std::smatch matches_enable_if;
 
-    const std::string typename_name = line.substr(typename_name_start, typename_name_end - typename_name_start);
+    if (std::regex_search(line, matches_enable_if, pattern_enable_if))
+    {
+        result_condition = matches_enable_if[1].str();
+        std::regex pattern_content_between_angle_brackets(R"(<(.*?)>)");
+        std::smatch matches_content_between_angle_brackets;
 
-    output << typename_name << " " << next_line << " requires(" << line.substr(v_start, v_stop - v_start + 1) << ")" << std::endl;
+        if (std::regex_search(result_condition, matches_content_between_angle_brackets, pattern_content_between_angle_brackets))
+        {
+            result_type = matches_content_between_angle_brackets[1].str();
+        }
+    }
+    else
+    {
+        std::cout << "Invalid input data format" << std::endl;
+        return;
+    }
+
+    std::regex pattern_function_declaration(R"(\b\w+\(.*?\))");
+    std::smatch matches_function_declaration;
+
+    if (std::regex_search(line, matches_function_declaration, pattern_function_declaration))
+    {
+        result_func_name = matches_function_declaration[0].str();
+    }
+    else
+    {
+        std::cout << "Function name not found" << std::endl;
+    }
+
+    output << result_type + " " + result_func_name + " requires " + result_condition << std::endl;
+    output << "{" << std::endl;
 }
 
 void replace_class_parameter(std::string &line, const size_t enable_if_start, std::ofstream &output)
@@ -114,13 +143,10 @@ int main(int argc, char *argv[])
             {
                 replace_class_parameter(line, enable_if_start, output);
             }
-            else if (0) // FUNCTION PARAMETER
-            {
-                std::cout << "DEBUG IV\n";
-            }
             else
             {
                 std::cout << "This example of enable_if substitution is not supported yet\n";
+                output << line << std::endl;
             }
         }
         else
