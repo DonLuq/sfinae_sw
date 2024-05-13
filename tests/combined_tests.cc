@@ -13,7 +13,7 @@ std::enable_if_t<std::is_floating_point_v<T>, T> square(T x)
 }
 
 template <typename T>
-std::enable_if_t<std::is_arithmetic_v<T>, T> max(T a, T b)
+std::enable_if_t<std::is_arithmetic_v<T> && std::is_unsigned_v<T>, T> max(T a, T b)
 {
     return (a > b) ? a : b;
 }
